@@ -12,6 +12,10 @@ import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.widget.Toast;
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 public class MainActivity extends Activity {
     private WebView web;
@@ -32,7 +36,40 @@ public class MainActivity extends Activity {
         web.addJavascriptInterface(new Bridge(), "Android");
         setContentView(web);
         hideBars();
-        web.loadUrl("file:///android_asset/index.html");
+        String cached = readCache();
+        if (cached != null) show(cached); else web.loadUrl("file:///android_asset/index.html");
+        checkUpdate();
+    }
+
+    static final String UPDATE_URL = "https://raw.githubusercontent.com/thiagogaldinozicao-source/android/aventura-do-zicao/aventura-do-zicao/app/src/main/assets/index.html";
+    private long startT = System.currentTimeMillis();
+    private File cacheFile() { return new File(getFilesDir(), "game.html"); }
+    private String readCache() {
+        try { File f = cacheFile(); if (!f.exists()) return null;
+            byte[] b = new byte[(int) f.length()]; FileInputStream in = new FileInputStream(f); int n = 0; while (n < b.length) { int r = in.read(b, n, b.length - n); if (r < 0) break; n += r; } in.close();
+            return new String(b, 0, n, "UTF-8"); } catch (Exception e) { return null; }
+    }
+    private void show(String html) { web.loadDataWithBaseURL("file:///android_asset/index.html", html, "text/html", "utf-8", null); }
+    private void checkUpdate() {
+        new Thread(new Runnable() { public void run() {
+            try {
+                HttpURLConnection c = (HttpURLConnection) new URL(UPDATE_URL + "?t=" + System.currentTimeMillis()).openConnection();
+                c.setConnectTimeout(5000); c.setReadTimeout(15000); c.setRequestProperty("Cache-Control", "no-cache");
+                if (c.getResponseCode() != 200) return;
+                ByteArrayOutputStream bo = new ByteArrayOutputStream(); InputStream in = c.getInputStream(); byte[] buf = new byte[65536]; int r;
+                while ((r = in.read(buf)) > 0) bo.write(buf, 0, r); in.close();
+                final String html = bo.toString("UTF-8");
+                if (html.length() < 20000 || !html.contains("</html>")) return;
+                String old = readCache();
+                if (old != null && old.equals(html)) return;
+                FileOutputStream out = new FileOutputStream(cacheFile()); out.write(bo.toByteArray()); out.close();
+                final boolean early = System.currentTimeMillis() - startT < 8000;
+                runOnUiThread(new Runnable() { public void run() {
+                    if (early) { show(html); Toast.makeText(MainActivity.this, "Jogo atualizado! ✅", Toast.LENGTH_LONG).show(); }
+                    else Toast.makeText(MainActivity.this, "Atualização baixada: reabra o jogo pra usar", Toast.LENGTH_LONG).show();
+                } });
+            } catch (Exception e) { }
+        } }).start();
     }
 
     class Bridge {
