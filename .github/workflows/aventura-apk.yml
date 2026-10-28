@@ -1,0 +1,19 @@
+name: build-apk
+on:
+  push:
+    paths: ["aventura-do-zicao/**", ".github/workflows/aventura-apk.yml"]
+  workflow_dispatch:
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: aventura-do-zicao } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.9' }
+      - run: gradle assembleRelease --no-daemon
+      - run: cp app/build/outputs/apk/release/*.apk AventuraDoZicao.apk
+      - uses: actions/upload-artifact@v4
+        with: { name: AventuraDoZicao, path: aventura-do-zicao/AventuraDoZicao.apk }
