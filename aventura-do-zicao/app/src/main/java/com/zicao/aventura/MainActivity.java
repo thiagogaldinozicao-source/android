@@ -19,7 +19,7 @@ import java.net.URL;
 
 public class MainActivity extends Activity {
     private WebView web;
-    private float lx, ly, lhx, lhy;
+    private final java.util.Map<Integer,float[]> lastAx = new java.util.HashMap<>();
 
     @Override
     protected void onCreate(Bundle b) {
@@ -95,8 +95,8 @@ public class MainActivity extends Activity {
             || c == KeyEvent.KEYCODE_HOME || c == KeyEvent.KEYCODE_POWER) return super.dispatchKeyEvent(e);
         if (c == KeyEvent.KEYCODE_BACK && e.isLongPress()) { finish(); return true; }
         int a = e.getAction();
-        if (a == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) js("window.__key&&__key(" + c + ",1)");
-        else if (a == KeyEvent.ACTION_UP) js("window.__key&&__key(" + c + ",0)");
+        if (a == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) js("window.__key&&__key(" + c + ",1," + e.getDeviceId() + ")");
+        else if (a == KeyEvent.ACTION_UP) js("window.__key&&__key(" + c + ",0," + e.getDeviceId() + ")");
         if (c == KeyEvent.KEYCODE_BACK && a == KeyEvent.ACTION_DOWN) e.startTracking();
         return GAME_KEYS.contains(c) || super.dispatchKeyEvent(e);
     }
@@ -111,9 +111,10 @@ public class MainActivity extends Activity {
             && e.getAction() == MotionEvent.ACTION_MOVE) {
             float x = e.getAxisValue(MotionEvent.AXIS_X), y = e.getAxisValue(MotionEvent.AXIS_Y);
             float hx = e.getAxisValue(MotionEvent.AXIS_HAT_X), hy = e.getAxisValue(MotionEvent.AXIS_HAT_Y);
-            if (x != lx || y != ly || hx != lhx || hy != lhy) {
-                lx = x; ly = y; lhx = hx; lhy = hy;
-                js("window.__axis&&__axis(" + x + "," + y + "," + hx + "," + hy + ")");
+            float[] l = lastAx.get(e.getDeviceId()); if (l == null) { l = new float[4]; lastAx.put(e.getDeviceId(), l); }
+            if (x != l[0] || y != l[1] || hx != l[2] || hy != l[3]) {
+                l[0] = x; l[1] = y; l[2] = hx; l[3] = hy;
+                js("window.__axis&&__axis(" + x + "," + y + "," + hx + "," + hy + "," + e.getDeviceId() + ")");
             }
             return true;
         }
