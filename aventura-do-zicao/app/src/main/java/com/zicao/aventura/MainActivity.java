@@ -56,11 +56,16 @@ public class MainActivity extends Activity {
         int c = e.getKeyCode();
         if (c == KeyEvent.KEYCODE_VOLUME_UP || c == KeyEvent.KEYCODE_VOLUME_DOWN || c == KeyEvent.KEYCODE_VOLUME_MUTE
             || c == KeyEvent.KEYCODE_HOME || c == KeyEvent.KEYCODE_POWER) return super.dispatchKeyEvent(e);
+        if (c == KeyEvent.KEYCODE_BACK && e.isLongPress()) { finish(); return true; }
         int a = e.getAction();
         if (a == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) js("window.__key&&__key(" + c + ",1)");
         else if (a == KeyEvent.ACTION_UP) js("window.__key&&__key(" + c + ",0)");
-        return true;
+        if (c == KeyEvent.KEYCODE_BACK && a == KeyEvent.ACTION_DOWN) e.startTracking();
+        return GAME_KEYS.contains(c) || super.dispatchKeyEvent(e);
     }
+    private static final java.util.Set<Integer> GAME_KEYS = new java.util.HashSet<>(java.util.Arrays.asList(
+        4,19,20,21,22,23,62,66,82,96,97,98,99,100,101,102,103,104,105,106,107,108,109,111,160));
+    @Override protected void onDestroy() { super.onDestroy(); if (web != null) { web.destroy(); web = null; } }
 
     @Override
     public boolean dispatchGenericMotionEvent(MotionEvent e) {
